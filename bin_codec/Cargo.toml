@@ -1,0 +1,7 @@
+[package]
+name = "bin_codec"
+version = "0.1.0"
+authors = ["ywzjackal@163.com <ywzjackal@163.com>"]
+edition = "2018"
+
+[dependencies]

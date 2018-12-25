@@ -1,0 +1,9 @@
+[package]
+name = "bin_codec_test"
+version = "0.1.0"
+authors = ["ywzjackal@163.com <ywzjackal@163.com>"]
+edition = "2018"
+
+[dependencies]
+bin_codec = {path = "../bin_codec"}
+bin_codec_derive = {path = "../bin_codec_derive"}
