@@ -1,6 +1,6 @@
 #[derive(Debug, PartialEq)]
 pub enum Error {
-    UnexpectEob { offset: usize, expected: usize, real: usize },
+    UnexpectEndOfBuff,
     Other(String),
 }
 

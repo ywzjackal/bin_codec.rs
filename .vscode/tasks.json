@@ -1,0 +1,27 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "test ts_pack",
+            "type": "shell",
+            "command": "cargo test --test ts_pack"
+        },
+        {
+            "label": "bench ts_pack",
+            "type": "shell",
+            "command": "cargo bench --bench ts_pack"
+        },
+        {
+            "label": "expand ts_pack",
+            "type": "shell",
+            "command": "cargo expand -p bin_codec_test2 --test ts_pack"
+        },
+        {
+            "label": "test vec",
+            "type": "shell",
+            "command": "cargo test --test vec"
+        }
+    ]
+}

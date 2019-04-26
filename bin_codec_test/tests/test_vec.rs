@@ -5,7 +5,7 @@ fn test_count() {
     #[derive(BinDecode)]
     struct Struct {
         a_field: u8,
-        #[bin(count="a_field as usize")]
+        #[bin(count(a_field as usize))]
         b_field: Vec<u8>,
     }
     let target = [0];
@@ -24,17 +24,17 @@ fn test_count() {
 #[test]
 fn test_has_next() {
     #[derive(BinDecode, Debug)]
-    #[bin(has_next="value != 0")]
+    #[bin(has_next=(value != 0))]
     struct Item {
         value: u8,
     }
     #[derive(BinDecode, Debug)]
     struct Struct {
         a_field: u8,
-        #[bin(is_some="a_field == 0")]
+        #[bin(is_some(a_field == 0))]
         b_field: Vec<Item>,
     }
-    let (s, size) = Struct::decode_be(&[0, 1, 2, 0, 1], 0, &mut Context::default()).unwrap();
+    let (s, _size) = Struct::decode_be(&[0, 1, 2, 0, 1], 0, &mut Context::default()).unwrap();
     assert_eq!(0, s.a_field);
     assert_eq!(3, s.b_field.len());
 }
@@ -44,7 +44,7 @@ fn test_bits_on_vec() {
     #[derive(BinDecode, BinEncode)]
     struct S {
         count: u8,
-        #[bin(bits=16, count="count as usize")]
+        #[bin(bits=16, count=count as usize)]
         values: Vec<u32>,
     }
 

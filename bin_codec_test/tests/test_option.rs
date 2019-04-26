@@ -5,7 +5,7 @@ fn test_is_some() {
     #[derive(BinEncode, BinDecode)]
     struct Struct {
         a_field: i32,
-        #[bin(is_some="a_field == 0")]
+        #[bin(is_some=a_field == 0)]
         b_field: Option<i32>,
     }
     let target = [0x12,0x34,0x56,0x78];

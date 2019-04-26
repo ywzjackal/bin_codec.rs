@@ -23,23 +23,23 @@ pub fn encode(input: TokenStream) -> TokenStream {
         Data::Enum(data_enum) => encode_enum(&data_enum, &crate::Endin::Little),
         Data::Union(data_union) => encode_union(&data_union, &crate::Endin::Little),
     };
-    let fieldattr = crate::attribute::FieldAttr::ser_attrs(&input.attrs);
-    let before = crate::attribute::before(&fieldattr);
-    let after = crate::attribute::after(&fieldattr);
+    // let fieldattr = crate::attribute::FieldAttr::from_attrs(&input.attrs);
+    // let before = crate::attribute::before_en(&fieldattr, &name);
+    // let after = crate::attribute::after(&fieldattr);
     let expanded = quote! {
         impl #generics bin_codec::Encode for #name #generics #where_clause {
             fn encode_be(&self, target: &mut [u8], mut target_start: usize, ctx: &mut bin_codec::Context) -> bin_codec::Result<usize> {
                 let old_target_start = target_start;
-                #before
+                // #before
                 #inner_be
-                #after
+                // #after
                 Ok(target_start - old_target_start)
             }
             fn encode_le(&self, target: &mut [u8], mut target_start: usize, ctx: &mut bin_codec::Context) -> bin_codec::Result<usize> {
                 let old_target_start = target_start;
-                #before
+                // #before
                 #inner_le
-                #after
+                // #after
                 Ok(target_start - old_target_start)
             }
         }
@@ -63,23 +63,23 @@ pub fn decode(input: TokenStream) -> TokenStream {
         Data::Enum(data_enum) => decode_enum(&data_enum, &crate::Endin::Little),
         Data::Union(data_union) => decode_union(&data_union, &crate::Endin::Little),
     };
-    let fieldattr = crate::attribute::FieldAttr::des_attrs(&input.attrs);
-    let before = crate::attribute::before(&fieldattr);
-    let after = crate::attribute::after(&fieldattr);
+    // let fieldattr = crate::attribute::FieldAttr::from_attrs(&input.attrs);
+    // let before = crate::attribute::before_de(&fieldattr, name);
+    // let after = crate::attribute::after(&fieldattr);
     let expanded = quote! {
         impl #generics bin_codec::Decode for #name #generics #where_clause {
             fn decode_be(data: &[u8], mut data_start: usize, ctx: &mut bin_codec::Context) -> bin_codec::Result<(Self, usize)> {
                 let data_start_old = data_start;
-                #before
+                // #before
                 #inner_be
-                #after
+                // #after
                 Ok((rt, data_start - data_start_old))
             }
             fn decode_le(data: &[u8], mut data_start: usize, ctx: &mut bin_codec::Context) -> bin_codec::Result<(Self, usize)> {
                 let data_start_old = data_start;
-                #before
+                // #before
                 #inner_le
-                #after
+                // #after
                 Ok((rt, data_start - data_start_old))
             }
         }

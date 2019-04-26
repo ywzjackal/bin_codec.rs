@@ -15,8 +15,8 @@ pub(crate) fn encode(field: &FieldsNamed, ed: &crate::Endin) -> TokenStream {
 pub(crate) fn decode(field: &FieldsNamed, ed: &crate::Endin) -> (Vec<TokenStream>, Vec<TokenStream>) {
     let mut values = Vec::new();
     let mut fields = Vec::new();
-    for field in field.named.iter() {
-        let t = field::decode(field, ed);
+    for (i, field) in field.named.iter().enumerate() {
+        let t = field::decode(field, i, ed);
         values.push(t);
         let name = &field.ident;
         let f = quote! { #name };

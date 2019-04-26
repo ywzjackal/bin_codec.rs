@@ -1,5 +1,3 @@
-use proc_macro2::TokenStream;
-use quote::*;
 use syn::*;
 
 pub struct FieldAttr {
@@ -60,33 +58,4 @@ fn find_in_meta_list(list: &MetaList, ident: &str) -> Option<Lit> {
         }
     }
     None
-}
-
-pub fn before_de(attr: &FieldAttr, ident: &ToTokens) -> impl ToTokens {
-    let bits = attr.bits.as_ref().map(|l| quote!(#l)).unwrap_or(quote!(std::mem::size_of::<#ident>() * 8));
-    let is_some = attr.is_some.as_ref().map(|l| quote!(Some(#l))).unwrap_or(quote!(None));
-    let count = attr.count.as_ref().map(|l| quote!(Some(#l))).unwrap_or(quote!(None));
-    quote! {
-        ctx.bits = #bits;
-        ctx.is_some = #is_some;
-        ctx.count = #count;
-    }
-}
-
-pub fn before_en(attr: &FieldAttr, ident: &ToTokens) -> impl ToTokens {
-    let bits = attr.bits.as_ref().map(|l| quote!(#l)).unwrap_or(quote!(std::mem::size_of::<#ident>() * 8));
-    let is_some = attr.is_some.as_ref().map(|l| quote!(Some(#l))).unwrap_or(quote!(None));
-    let count = attr.count.as_ref().map(|l| quote!(Some(#l))).unwrap_or(quote!(None));
-    quote! {
-        ctx.bits = #bits;
-        ctx.is_some = #is_some;
-        ctx.count = #count;
-    }
-}
-
-pub fn after(attr: &FieldAttr) -> impl ToTokens {
-    let has_next = attr.has_next.as_ref().map(|l| quote!(Some(#l))).unwrap_or(quote!(None));
-    quote! {
-        ctx.has_next = #has_next;
-    }
 }

@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use bin_codec::*;
 use bin_codec_derive::BinEncode;
 #[test]
@@ -34,7 +35,7 @@ fn test_attr_value_expr() {
         b_field: 0,
     };
 
-    let mut target = [0u8; 2];;
+    let mut target = [0u8; 2];
     s.encode_be(&mut target, 0, &mut Context::default()).unwrap();
     assert_eq!(&[0xA0, 2], &target[..]);
 }
