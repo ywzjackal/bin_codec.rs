@@ -3,12 +3,15 @@ use quote::*;
 use syn::*;
 
 pub struct FieldAttr {
-    pub bits: Option<Lit>,
-    pub is_some: Option<Lit>,
-    pub has_next: Option<Lit>,
-    pub count: Option<Lit>,
-    pub value: Option<Lit>,
-    pub skip: Option<Lit>,
+    pub bits: Option<TokenStream>,
+    pub is_some: Option<TokenStream>,
+    pub has_next: Option<TokenStream>,
+    pub count: Option<TokenStream>,
+    pub value: Option<TokenStream>,
+    pub skip: Option<TokenStream>,
+    pub before_de: Option<TokenStream>,
+    pub after_de: Option<TokenStream>,
+    pub context: Option<TokenStream>,
 }
 
 impl FieldAttr {
@@ -20,16 +23,22 @@ impl FieldAttr {
             has_next: find_in_attrs(attrs, "has_next"),
             value: find_in_attrs(attrs, "value"),
             skip: find_in_attrs(attrs, "skip"),
+            before_de: find_in_attrs(attrs, "before_de"),
+            after_de: find_in_attrs(attrs, "after_de"),
+            context: find_in_attrs(attrs, "context"),
         }
     }
 }
 
-fn find_in_attrs(attrs: &[Attribute], ident: &str) -> Option<Lit> {
+fn find_in_attrs(attrs: &[Attribute], ident: &str) -> Option<TokenStream> {
     for attr in attrs {
-        if let Ok(meta) = attr.parse_meta() {
-            if let Some(lit) = find_in_meta(&meta, ident) {
-                return Some(lit);
+        match attr.parse_meta() {
+            Ok(meta) => {
+                if let Some(lit) = find_in_meta(&meta, ident) {
+                    return Some(lit_to_tokenstream(&lit))
+                }
             }
+            Err(_) => panic!("parse attribute fail: {}", attr.tts.to_string()),
         }
     }
     None
@@ -62,31 +71,13 @@ fn find_in_meta_list(list: &MetaList, ident: &str) -> Option<Lit> {
     None
 }
 
-pub fn before_de(attr: &FieldAttr, ident: &ToTokens) -> impl ToTokens {
-    let bits = attr.bits.as_ref().map(|l| quote!(#l)).unwrap_or(quote!(std::mem::size_of::<#ident>() * 8));
-    let is_some = attr.is_some.as_ref().map(|l| quote!(Some(#l))).unwrap_or(quote!(None));
-    let count = attr.count.as_ref().map(|l| quote!(Some(#l))).unwrap_or(quote!(None));
-    quote! {
-        ctx.bits = #bits;
-        ctx.is_some = #is_some;
-        ctx.count = #count;
-    }
-}
-
-pub fn before_en(attr: &FieldAttr, ident: &ToTokens) -> impl ToTokens {
-    let bits = attr.bits.as_ref().map(|l| quote!(#l)).unwrap_or(quote!(std::mem::size_of::<#ident>() * 8));
-    let is_some = attr.is_some.as_ref().map(|l| quote!(Some(#l))).unwrap_or(quote!(None));
-    let count = attr.count.as_ref().map(|l| quote!(Some(#l))).unwrap_or(quote!(None));
-    quote! {
-        ctx.bits = #bits;
-        ctx.is_some = #is_some;
-        ctx.count = #count;
-    }
-}
-
-pub fn after(attr: &FieldAttr) -> impl ToTokens {
-    let has_next = attr.has_next.as_ref().map(|l| quote!(Some(#l))).unwrap_or(quote!(None));
-    quote! {
-        ctx.has_next = #has_next;
+fn lit_to_tokenstream(lit: &Lit) -> TokenStream {
+    match lit {
+        Lit::Str(litstr) => {
+            litstr.value().parse().unwrap_or_else(|_| {
+                crate::utils::error(litstr, "parse expr fail")
+            })
+        }
+        _ => quote!(#lit)
     }
 }

@@ -1,2 +1,2 @@
 [workspace]
-members = ["bin_codec", "bin_codec_derive2", "bin_codec_test2"]
+members = ["bin_codec", "bin_codec_derive", "bin_codec_test"]

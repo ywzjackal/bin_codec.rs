@@ -27,29 +27,30 @@ macro_rules! impl_number {
                 }
 
                 #[inline(always)]
-                fn bits(&self) -> usize { size_of::<$ty>() * 8 }
+                fn bits_with_user_define(&self, bits: Option<usize>) -> usize { bits.unwrap_or(size_of::<$ty>() * 8) }
             }
 
             impl EncodeLe for $ty {
                 #[inline(always)]
                 fn encode_offset<T>(&self, target: &mut [u8], _ctx: &mut T, offset: &mut usize, bits: usize) {
-                    let size = size_of::<$ty>() * 8;
-                    let v = self.to_le() >> size - bits;
+                    // let size = size_of::<$ty>() * 8;
+                    let v = self.to_le();
                     unsafe {
-                        crate::utils::bit_copy(target.as_mut_ptr(), offset, &v as *const $ty as *const u8, size - bits, bits);
+                        crate::utils::bit_copy(target.as_mut_ptr(), offset, &v as *const $ty as *const u8, 0, bits);
                     }
                 }
 
                 #[inline(always)]
-                fn bits(&self) -> usize { size_of::<$ty>() * 8 }
+                fn bits_with_user_define(&self, bits: Option<usize>) -> usize { bits.unwrap_or(size_of::<$ty>() * 8) }
             }
 
             impl DecodeBe for $ty {
+                type Context = ();
                 #[inline(always)]
-                fn decode_offset<T>(data: &[u8], offset: &mut usize, _: &mut ShouldDecode, _: &mut T, bits: usize) -> Result<Self> {
+                fn decode_offset(data: &[u8], offset: &mut usize, _: &mut ShouldDecode, _: &mut Self::Context, bits: usize) -> Result<Self> {
                     let size = size_of::<$ty>() * 8;
                     let mut v: $ty = 0;
-                    // println!(">> {} {} {}", data.len(), *offset, bits);
+                    println!(">> {} {} {}", data.len(), *offset, bits);
                     check_eob!(data.len() * 8, *offset, std::mem::size_of::<$ty>());
                     unsafe {
                         crate::utils::bit_copy(&mut v as *mut $ty as *mut u8, &mut (size - bits), data.as_ptr(), *offset, bits);
@@ -57,11 +58,16 @@ macro_rules! impl_number {
                     *offset += bits;
                     Ok(v.to_be())
                 }
+                #[inline(always)]
+                fn default_bits() -> usize {
+                    size_of::<$ty>() * 8
+                }
             }
 
             impl DecodeLe for $ty {
+                type Context = ();
                 #[inline(always)]
-                fn decode_offset<T>(data: &[u8], offset: &mut usize, _: &mut ShouldDecode, _: &mut T, bits: usize) -> Result<Self> {
+                fn decode_offset(data: &[u8], offset: &mut usize, _: &mut ShouldDecode, _: &mut Self::Context, bits: usize) -> Result<Self> {
                     check_eob!(data.len() * 8, *offset, std::mem::size_of::<$ty>());
                     let mut v: $ty = 0;
                     unsafe {
@@ -69,6 +75,10 @@ macro_rules! impl_number {
                     }
                     *offset += bits;
                     Ok(v.to_le())
+                }
+                #[inline(always)]
+                fn default_bits() -> usize {
+                    size_of::<$ty>() * 8
                 }
             }
         )*
@@ -90,7 +100,7 @@ macro_rules! impl_float {
                 }
 
                 #[inline(always)]
-                fn bits(&self) -> usize { size_of::<$ty>() * 8 }
+                fn bits_with_user_define(&self, bits: Option<usize>) -> usize { bits.unwrap_or(size_of::<$ty>() * 8) }
             }
 
             impl EncodeLe for $ty {
@@ -103,12 +113,13 @@ macro_rules! impl_float {
                 }
 
                 #[inline(always)]
-                fn bits(&self) -> usize { size_of::<$ty>() * 8 }
+                fn bits_with_user_define(&self, bits: Option<usize>) -> usize { bits.unwrap_or(size_of::<$ty>() * 8) }
             }
 
             impl DecodeBe for $ty {
+                type Context = ();
                 #[inline(always)]
-                fn decode_offset<T>(data: &[u8], offset: &mut usize, _: &mut ShouldDecode, _: &mut T, _bits: usize) -> Result<Self> {
+                fn decode_offset(data: &[u8], offset: &mut usize, _: &mut ShouldDecode, _: &mut Self::Context, _bits: usize) -> Result<Self> {
                     check_eob!(data.len() * 8, *offset, std::mem::size_of::<$ty>());
                     let size = size_of::<$ty>() * 8;
                     let mut v: $ty = 0.;
@@ -118,11 +129,16 @@ macro_rules! impl_float {
                     *offset += size;
                     Ok(v)
                 }
+                #[inline(always)]
+                fn default_bits() -> usize {
+                    size_of::<$ty>() * 8
+                }
             }
 
             impl DecodeLe for $ty {
+                type Context = ();
                 #[inline(always)]
-                fn decode_offset<T>(data: &[u8], offset: &mut usize, _: &mut ShouldDecode, _: &mut T, _bits: usize) -> Result<Self> {
+                fn decode_offset(data: &[u8], offset: &mut usize, _: &mut ShouldDecode, _: &mut Self::Context, _bits: usize) -> Result<Self> {
                     check_eob!(data.len() * 8, *offset, std::mem::size_of::<$ty>());
                     let size = size_of::<$ty>() * 8;
                     let mut v: $ty = 0.;
@@ -131,6 +147,10 @@ macro_rules! impl_float {
                     }
                     *offset += size;
                     Ok(v)
+                }
+                #[inline(always)]
+                fn default_bits() -> usize {
+                    size_of::<$ty>() * 8
                 }
             }
         )*
@@ -155,7 +175,7 @@ impl EncodeBe for bool {
             );
         }
     }
-    fn bits(&self) -> usize {
+    fn bits_with_user_define(&self, _bits: Option<usize>) -> usize {
         1
     }
 }
@@ -175,19 +195,20 @@ impl EncodeLe for bool {
             );
         }
     }
-    fn bits(&self) -> usize {
+    fn bits_with_user_define(&self, _bits: Option<usize>) -> usize {
         1
     }
 }
 
 impl DecodeBe for bool {
+    type Context = ();
     #[inline(always)]
-    fn decode_offset<T>(
+    fn decode_offset(
         data: &[u8],
         offset: &mut usize,
         _: &mut ShouldDecode,
-        _: &mut T,
-         _bits: usize
+        _: &mut Self::Context,
+        _bits: usize
     ) -> Result<Self> {
         check_eob!(data.len() * 8, *offset, 1);
         let size = 1;
@@ -204,16 +225,21 @@ impl DecodeBe for bool {
         *offset += size;
         Ok(v)
     }
+    #[inline(always)]
+    fn default_bits() -> usize {
+        1
+    }
 }
 
 impl DecodeLe for bool {
+    type Context = ();
     #[inline(always)]
-    fn decode_offset<T>(
+    fn decode_offset(
         data: &[u8],
         offset: &mut usize,
         _: &mut ShouldDecode,
-        _: &mut T,
-         _bits: usize
+        _: &mut Self::Context,
+        _bits: usize
     ) -> Result<Self> {
         check_eob!(data.len() * 8, *offset, 1);
         let size = 1;
@@ -229,6 +255,10 @@ impl DecodeLe for bool {
         }
         *offset += size;
         Ok(v)
+    }
+    #[inline(always)]
+    fn default_bits() -> usize {
+        1
     }
 }
 
@@ -240,8 +270,8 @@ impl<E: EncodeBe> EncodeBe for Vec<E> {
         }
     }
     #[inline(always)]
-    fn bits(&self) -> usize {
-        self.iter().map(|i| i.bits()).sum()
+    fn bits_with_user_define(&self, bits: Option<usize>) -> usize {
+        self.iter().map(|i| i.bits_with_user_define(bits)).sum()
     }
 }
 
@@ -253,8 +283,8 @@ impl<E: EncodeLe> EncodeLe for Vec<E> {
         }
     }
     #[inline(always)]
-    fn bits(&self) -> usize {
-        self.iter().map(|i| i.bits()).sum()
+    fn bits_with_user_define(&self, bits: Option<usize>) -> usize {
+        self.iter().map(|i| i.bits_with_user_define(bits)).sum()
     }
 }
 
@@ -266,8 +296,8 @@ impl<E: EncodeBe> EncodeBe for Option<E> {
         }
     }
     #[inline(always)]
-    fn bits(&self) -> usize {
-        self.iter().map(|i| i.bits()).sum()
+    fn bits_with_user_define(&self, bits: Option<usize>) -> usize {
+        self.iter().map(|i| i.bits_with_user_define(bits)).sum()
     }
 }
 
@@ -279,18 +309,19 @@ impl<E: EncodeLe> EncodeLe for Option<E> {
         }
     }
     #[inline(always)]
-    fn bits(&self) -> usize {
-        self.iter().map(|i| i.bits()).sum()
+    fn bits_with_user_define(&self, bits: Option<usize>) -> usize {
+        self.iter().map(|i| i.bits_with_user_define(bits)).sum()
     }
 }
 
 impl<E: DecodeBe> DecodeBe for Vec<E> {
+    type Context = E::Context;
     #[inline(always)]
-    fn decode_offset<T>(
+    fn decode_offset(
         data: &[u8],
         offset: &mut usize,
         sd: &mut ShouldDecode,
-        ctx: &mut T,
+        ctx: &mut Self::Context,
         bits: usize,
     ) -> Result<Self> {
         match sd {
@@ -312,16 +343,21 @@ impl<E: DecodeBe> DecodeBe for Vec<E> {
             }
             _ => panic!("must set `count` or `has_next` on `Vec` field"),
         }
+    }
+    #[inline(always)]
+    fn default_bits() -> usize {
+        E::default_bits()
     }
 }
 
 impl<E: DecodeLe> DecodeLe for Vec<E> {
+    type Context = E::Context;
     #[inline(always)]
-    fn decode_offset<T>(
+    fn decode_offset(
         data: &[u8],
         offset: &mut usize,
         sd: &mut ShouldDecode,
-        ctx: &mut T,
+        ctx: &mut Self::Context,
         bits: usize,
     ) -> Result<Self> {
         match sd {
@@ -344,38 +380,70 @@ impl<E: DecodeLe> DecodeLe for Vec<E> {
             _ => panic!("must set `count` or `has_next` on `Vec` field"),
         }
     }
+    #[inline(always)]
+    fn default_bits() -> usize {
+        E::default_bits()
+    }
 }
 
 impl<E: DecodeBe> DecodeBe for Option<E> {
+    type Context = E::Context;
     #[inline(always)]
-    fn decode_offset<T>(
+    fn decode_offset(
         data: &[u8],
         offset: &mut usize,
         sd: &mut ShouldDecode,
-        ctx: &mut T,
+        ctx: &mut Self::Context,
         bits: usize,
     ) -> Result<Self> {
         match sd {
-            ShouldDecode::IsSome(true) => Ok(DecodeBe::decode_offset(data, offset, sd, ctx, bits)?),
+            ShouldDecode::IsSome(true) => Ok(Some(DecodeBe::decode_offset(data, offset, sd, ctx, bits)?)),
             ShouldDecode::IsSome(false) => Ok(None),
             _ => panic!("must set `is_some` on `Option` field"),
         }
+    }
+    #[inline(always)]
+    fn default_bits() -> usize {
+        E::default_bits()
     }
 }
 
 impl<E: DecodeLe> DecodeLe for Option<E> {
+    type Context = E::Context;
     #[inline(always)]
-    fn decode_offset<T>(
+    fn decode_offset(
         data: &[u8],
         offset: &mut usize,
         sd: &mut ShouldDecode,
-        ctx: &mut T,
+        ctx: &mut Self::Context,
         bits: usize,
     ) -> Result<Self> {
         match sd {
-            ShouldDecode::IsSome(true) => Ok(DecodeLe::decode_offset(data, offset, sd, ctx, bits)?),
+            ShouldDecode::IsSome(true) => Ok(Some(DecodeLe::decode_offset(data, offset, sd, ctx, bits)?)),
             ShouldDecode::IsSome(false) => Ok(None),
             _ => panic!("must set `is_some` on `Option` field"),
         }
     }
+    #[inline(always)]
+    fn default_bits() -> usize {
+        E::default_bits()
+    }
+}
+
+#[test]
+fn test_encode_le_number() {
+    let mut data = [0u8; 100];
+    let mut offset = 0;
+    EncodeLe::encode_offset(&0x11223344i32, &mut data, &mut (), &mut offset, 24);
+    assert_eq!(&data[..3], &[0x44, 0x33, 0x22], "{:X?}", &data[..3]);
+    assert_eq!(offset, 24);
+}
+
+#[test]
+fn test_decode_le_number() {
+    let data = [0x44, 0x33, 0x22];
+    let mut offset = 0;
+    let value: i32 = DecodeLe::decode_offset(&data, &mut offset, &mut ShouldDecode::None, &mut (), 24).unwrap();
+    assert_eq!(value, 0x223344);
+    assert_eq!(offset, 24);
 }

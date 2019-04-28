@@ -11,16 +11,27 @@ pub(crate) enum Endin {
     Big, Little
 }
 
-mod utils;
+mod error;
+pub(crate) mod utils;
 mod attribute;
 mod codec;
 
-#[proc_macro_derive(BinEncode, attributes(bin_encode, bin))]
-pub fn derive_bin_encode(input: TokenStream) -> TokenStream {
-    codec::encode(input)
+#[proc_macro_derive(BinEncodeBe, attributes(bin))]
+pub fn derive_bin_encode_be(input: TokenStream) -> TokenStream {
+    codec::encode(input, Endin::Big)
 }
 
-#[proc_macro_derive(BinDecode, attributes(bin_encode, bin))]
-pub fn derive_bin_decode(input: TokenStream) -> TokenStream {
-    codec::decode(input)
+#[proc_macro_derive(BinEncodeLe, attributes(bin))]
+pub fn derive_bin_encode_le(input: TokenStream) -> TokenStream {
+    codec::encode(input, Endin::Little)
+}
+
+#[proc_macro_derive(BinDecodeBe, attributes(bin))]
+pub fn derive_bin_decode_be(input: TokenStream) -> TokenStream {
+    codec::decode(input, Endin::Big)
+}
+
+#[proc_macro_derive(BinDecodeLe, attributes(bin))]
+pub fn derive_bin_decode_le(input: TokenStream) -> TokenStream {
+    codec::decode(input, Endin::Little)
 }

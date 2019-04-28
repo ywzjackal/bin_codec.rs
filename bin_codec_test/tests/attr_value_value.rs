@@ -1,12 +1,13 @@
 #![allow(dead_code)]
 use bin_codec::*;
-use bin_codec_derive::BinEncode;
+use bin_codec_derive::BinEncodeBe;
 #[test]
 fn test_attr_value_int() {
-    #[derive(BinEncode)]
-    struct Struct<T> where T: Encode {
-        #[bin(bits=4, value=0xff)]
-        a_field: T,
+    #[derive(BinEncodeBe)]
+    struct Struct<E> where E: EncodeBe {
+        #[bin(bits(4))]
+        #[bin(value(0xff))]
+        a_field: E,
     }
 
     let s = Struct::<_> {
@@ -14,7 +15,8 @@ fn test_attr_value_int() {
     };
 
     let mut target = [0u8; 1];
-    s.encode_be(&mut target, 0, &mut Context::default()).unwrap();
+    assert_eq!(s.bits(), 4);
+    s.encode(&mut target, &mut ());
     assert_eq!(&[0xf0], &target[..], "{:#02X?} != {:#02X?}", &[0xf0], &target[..]);
 }
 #[test]
@@ -22,11 +24,11 @@ fn test_attr_value_expr() {
     fn get_u8() -> u8 {
         0xa0
     }
-    #[derive(BinEncode)]
+    #[derive(BinEncodeBe)]
     struct Struct {
-        #[bin(value="get_u8()")]
+        #[bin(value("get_u8()"))]
         a_field: u8,
-        #[bin(value="self.a_field + 1")]
+        #[bin(value("self.a_field + 1"))]
         b_field: u8,
     }
 
@@ -36,6 +38,6 @@ fn test_attr_value_expr() {
     };
 
     let mut target = [0u8; 2];
-    s.encode_be(&mut target, 0, &mut Context::default()).unwrap();
+    s.encode(&mut target, &mut ());
     assert_eq!(&[0xA0, 2], &target[..]);
 }

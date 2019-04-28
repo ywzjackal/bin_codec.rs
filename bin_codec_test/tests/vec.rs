@@ -1,7 +1,7 @@
 use bin_codec::*;
-use bin_codec_derive2::{BinEncodeBe};
+use bin_codec_derive::{BinEncodeBe, BinDecodeBe};
 
-#[derive(BinEncodeBe)]
+#[derive(BinEncodeBe, BinDecodeBe, PartialEq, Debug)]
 pub struct TsPack {
     // 00 : 0
     pub sync_code: u8,
@@ -21,13 +21,13 @@ pub struct TsPack {
     pub seq: i8,
 }
 
-#[derive(BinEncodeBe)]
+#[derive(BinEncodeBe, BinDecodeBe, PartialEq, Debug)]
 pub struct Wrap {
     #[bin(count(1))]
     pub wrap: Vec<TsPack>,
 }
 #[test]
-fn test_wrap_vec() {
+fn test_vec_encode() {
     let ts = Wrap { 
         wrap: vec![
             TsPack {
@@ -46,4 +46,27 @@ fn test_wrap_vec() {
     ts.encode(&mut target, &mut ());
     let shouldbe = [0x47, 0b0100_0000 | 0x1A, 0xBC, 0b1000_0000 | 0xA];
     assert_eq!(target, shouldbe, "\r\n{:02X?} \r\n {:02X?}", target, shouldbe);
+}
+
+
+#[test]
+fn test_vec_decode() {
+    let ts = Wrap { 
+        wrap: vec![
+            TsPack {
+                sync_code: 0x47,
+                translation_error: false,
+                first_payload: true,
+                high_priority: false,
+                pid: 0x1ABC,
+                first: true,
+                last: false,
+                seq: 0xA,
+            }
+        ],
+    };
+    let src = [0x47, 0b0100_0000 | 0x1A, 0xBC, 0b1000_0000 | 0xA];
+    let (rt, bits) = Wrap::decode(&src, &mut ()).unwrap();
+    assert_eq!(bits, 4 * 8);
+    assert_eq!(rt, ts);
 }

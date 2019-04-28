@@ -5,7 +5,10 @@ pub trait EncodeBe {
         Self::encode_offset(self, target, ctx, &mut 0, self.bits());
     }
     fn encode_offset<T>(&self, target: &mut [u8], ctx: &mut T, offset: &mut usize, bits: usize);
-    fn bits(&self) -> usize;
+    fn bits(&self) -> usize {
+        Self::bits_with_user_define(self, None)
+    }
+    fn bits_with_user_define(&self, bits: Option<usize>) -> usize;
 }
 
 pub trait EncodeLe {
@@ -14,7 +17,10 @@ pub trait EncodeLe {
         Self::encode_offset(self, target, ctx, &mut 0, self.bits());
     }
     fn encode_offset<T>(&self, target: &mut [u8], ctx: &mut T, offset: &mut usize, bits: usize);
-    fn bits(&self) -> usize;
+    fn bits(&self) -> usize {
+        Self::bits_with_user_define(self, None)
+    }
+    fn bits_with_user_define(&self, bits: Option<usize>) -> usize;
 }
 
 pub enum ShouldDecode {
@@ -25,17 +31,21 @@ pub enum ShouldDecode {
 }
 
 pub trait DecodeBe: Sized {
-    fn decode<T>(data: &[u8], ctx: &mut T) -> error::Result<(Self, usize)> {
+    type Context;
+    fn decode(data: &[u8], ctx: &mut Self::Context) -> error::Result<(Self, usize)> {
         let mut offset = 0;
         Ok((Self::decode_offset(data, &mut offset, &mut ShouldDecode::None, ctx, 0)?, offset))
     }
-    fn decode_offset<T>(data: &[u8], offset: &mut usize, sd: &mut ShouldDecode, ctx: &mut T, bits: usize) -> error::Result<Self>;
+    fn decode_offset(data: &[u8], offset: &mut usize, sd: &mut ShouldDecode, ctx: &mut Self::Context, bits: usize) -> error::Result<Self>;
+    fn default_bits() -> usize;
 }
 
 pub trait DecodeLe: Sized {
-    fn decode<T>(data: &[u8], ctx: &mut T) -> error::Result<(Self, usize)> {
+    type Context;
+    fn decode(data: &[u8], ctx: &mut Self::Context) -> error::Result<(Self, usize)> {
         let mut offset = 0;
         Ok((Self::decode_offset(data, &mut offset, &mut ShouldDecode::None, ctx, 0)?, offset))
     }
-    fn decode_offset<T>(data: &[u8], offset: &mut usize, sd: &mut ShouldDecode, ctx: &mut T, bits: usize) -> error::Result<Self>;
+    fn decode_offset(data: &[u8], offset: &mut usize, sd: &mut ShouldDecode, ctx: &mut Self::Context, bits: usize) -> error::Result<Self>;
+    fn default_bits() -> usize;
 }

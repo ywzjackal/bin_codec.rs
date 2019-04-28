@@ -6,7 +6,7 @@ extern crate bincode;
 
 use std::io::Cursor;
 use bin_codec::*;
-use bin_codec_derive2::{BinEncodeBe};
+use bin_codec_derive::{BinEncodeBe};
 use criterion::Criterion;
 use bincode::*;
 

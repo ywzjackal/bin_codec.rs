@@ -5,7 +5,7 @@ extern crate serde_derive;
 extern crate bincode;
 
 use bin_codec::*;
-use bin_codec_derive2::{BinEncodeBe};
+use bin_codec_derive::{BinEncodeBe};
 use criterion::Criterion;
 use bincode::*;
 

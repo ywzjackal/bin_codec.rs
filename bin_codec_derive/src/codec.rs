@@ -1,115 +1,105 @@
+use crate::Endin;
+use crate::attribute::FieldAttr;
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
 use quote::*;
 use syn::*;
 
+mod field;
 mod named;
 mod unnamed;
 mod variant;
-mod field;
 
-pub fn encode(input: TokenStream) -> TokenStream {
+pub(crate) fn encode(input: TokenStream, ed: Endin) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let generics = input.generics;
     let where_clause = &generics.where_clause;
     let name = input.ident;
-    let inner_be: TokenStream2 = match &input.data {
-        Data::Struct(data_struct) => encode_struct(&data_struct, &crate::Endin::Big),
-        Data::Enum(data_enum) => encode_enum(&data_enum, &crate::Endin::Big),
-        Data::Union(data_union) => encode_union(&data_union, &crate::Endin::Big),
+    let decode: TokenStream2 = match &input.data {
+        Data::Struct(data_struct) => encode_struct(&data_struct, &ed),
+        _ => unimplemented!()
     };
-    let inner_le: TokenStream2 = match &input.data {
-        Data::Struct(data_struct) => encode_struct(&data_struct, &crate::Endin::Little),
-        Data::Enum(data_enum) => encode_enum(&data_enum, &crate::Endin::Little),
-        Data::Union(data_union) => encode_union(&data_union, &crate::Endin::Little),
+    let size: TokenStream2 = match &input.data {
+        Data::Struct(data_struct) => size_struct(&data_struct, &ed),
+        _ => unimplemented!()
     };
-    // let fieldattr = crate::attribute::FieldAttr::from_attrs(&input.attrs);
-    // let before = crate::attribute::before_en(&fieldattr, &name);
-    // let after = crate::attribute::after(&fieldattr);
+    let trait_name = match ed {
+        Endin::Big => quote!(bin_codec::EncodeBe),
+        Endin::Little => quote!(bin_codec::EncodeLe),
+    };
     let expanded = quote! {
-        impl #generics bin_codec::Encode for #name #generics #where_clause {
-            fn encode_be(&self, target: &mut [u8], mut target_start: usize, ctx: &mut bin_codec::Context) -> bin_codec::Result<usize> {
-                let old_target_start = target_start;
-                // #before
-                #inner_be
-                // #after
-                Ok(target_start - old_target_start)
+        impl #generics #trait_name for #name #generics #where_clause {
+            fn encode_offset<__CTX>(&self, target: &mut [u8], ctx: &mut __CTX, offset: &mut usize, bits: usize) {
+                use bin_codec::*;
+                let target_ptr = target.as_mut_ptr();
+                #decode
             }
-            fn encode_le(&self, target: &mut [u8], mut target_start: usize, ctx: &mut bin_codec::Context) -> bin_codec::Result<usize> {
-                let old_target_start = target_start;
-                // #before
-                #inner_le
-                // #after
-                Ok(target_start - old_target_start)
+
+            fn bits_with_user_define(&self, bits: Option<usize>) -> usize {
+                #size
             }
         }
     };
-//    println!("{}", expanded);
     TokenStream::from(expanded)
 }
 
-pub fn decode(input: TokenStream) -> TokenStream {
+pub(crate) fn decode(input: TokenStream, ed: Endin) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
+    let attr = FieldAttr::from_attrs(&input.attrs);
     let generics = input.generics;
     let where_clause = &generics.where_clause;
     let name = &input.ident;
-    let inner_be: TokenStream2 = match &input.data {
-        Data::Struct(data_struct) => decode_struct(&data_struct, name,&crate::Endin::Big),
-        Data::Enum(data_enum) => decode_enum(&data_enum, &crate::Endin::Big),
-        Data::Union(data_union) => decode_union(&data_union, &crate::Endin::Big),
+    let decode_be: TokenStream2 = match &input.data {
+        Data::Struct(data_struct) => decode_struct(&data_struct, name, &ed),
+        _ => unimplemented!(),
     };
-    let inner_le: TokenStream2 = match &input.data {
-        Data::Struct(data_struct) => decode_struct(&data_struct, name, &crate::Endin::Little),
-        Data::Enum(data_enum) => decode_enum(&data_enum, &crate::Endin::Little),
-        Data::Union(data_union) => decode_union(&data_union, &crate::Endin::Little),
+    let trait_name = match ed {
+        Endin::Big => quote!(bin_codec::DecodeBe),
+        Endin::Little => quote!(bin_codec::DecodeLe),
     };
-    // let fieldattr = crate::attribute::FieldAttr::from_attrs(&input.attrs);
-    // let before = crate::attribute::before_de(&fieldattr, name);
-    // let after = crate::attribute::after(&fieldattr);
+    let context_type = attr.context.map(|l| quote!(#l)).unwrap_or(quote!(()));
+    let has_next = attr.has_next.map(|l| quote!(*sd = ShouldDecode::HasNext(#l);));
     let expanded = quote! {
-        impl #generics bin_codec::Decode for #name #generics #where_clause {
-            fn decode_be(data: &[u8], mut data_start: usize, ctx: &mut bin_codec::Context) -> bin_codec::Result<(Self, usize)> {
-                let data_start_old = data_start;
-                // #before
-                #inner_be
-                // #after
-                Ok((rt, data_start - data_start_old))
+        impl #generics #trait_name for #name #generics #where_clause {
+            type Context = #context_type;
+            fn decode_offset(data: &[u8], data_start: &mut usize, sd: &mut ShouldDecode, ctx: &mut Self::Context, bits: usize) -> bin_codec::Result<Self> {
+                #decode_be
+                #has_next
+                Ok(rt)
             }
-            fn decode_le(data: &[u8], mut data_start: usize, ctx: &mut bin_codec::Context) -> bin_codec::Result<(Self, usize)> {
-                let data_start_old = data_start;
-                // #before
-                #inner_le
-                // #after
-                Ok((rt, data_start - data_start_old))
+
+            fn default_bits() -> usize {
+                0
             }
         }
     };
-//    println!("{}", expanded);
     TokenStream::from(expanded)
 }
 
-fn encode_struct(data: &DataStruct, ed: &crate::Endin) -> TokenStream2 {
+fn encode_struct(data: &DataStruct, ed: &Endin) -> TokenStream2 {
     match &data.fields {
-        Fields::Named(named) => {
-            self::named::encode(named, ed)
-        }
-        Fields::Unnamed(unnamed) => {
-            self::unnamed::encode(unnamed, ed)
-        }
-        Fields::Unit => {
-            unimplemented!()
-        }
+        Fields::Named(named) => self::named::encode(named, ed),
+        Fields::Unnamed(unnamed) => self::unnamed::encode(unnamed, ed),
+        Fields::Unit => unimplemented!(),
     }
 }
 
-fn decode_struct(data: &DataStruct, name: &Ident, ed: &crate::Endin) -> TokenStream2 {
+fn size_struct(data: &DataStruct, ed: &Endin) -> TokenStream2 {
+    match &data.fields {
+        Fields::Named(named) => self::named::size(named, ed),
+        Fields::Unnamed(unnamed) => self::unnamed::size(unnamed, ed),
+        Fields::Unit => unimplemented!(),
+    }
+}
+
+fn decode_struct(data: &DataStruct, name: &Ident, ed: &Endin) -> TokenStream2 {
     match &data.fields {
         Fields::Named(named) => {
             let (ref values, ref fields) = self::named::decode(named, ed);
             quote! {
                 #(let #fields = #values;)*
                 let rt = #name {
-                    #(#fields),*
+                    #(#fields,)*
                 };
             }
         }
@@ -117,40 +107,10 @@ fn decode_struct(data: &DataStruct, name: &Ident, ed: &crate::Endin) -> TokenStr
             let values = self::unnamed::decode(unnamed, ed);
             quote! {
                 let rt = #name (
-                    #(#values),*
+                    #(#values,)*
                 );
             }
         }
-        Fields::Unit => {
-            unimplemented!("`unit struct` not implemented")
-        }
+        Fields::Unit => unimplemented!("`unit struct` not implemented"),
     }
-}
-
-fn encode_enum(_data: &DataEnum, _ed: &crate::Endin) -> TokenStream2 {
-//    let mut tokens = Box::new(quote!());
-//    for variant in data.variants.iter() {
-//        let t = self::variant::encode(variant, ed);
-//        t.to_tokens(&mut tokens);
-//    }
-//    tokens
-    unimplemented!()
-}
-
-fn decode_enum(_data: &DataEnum, _ed: &crate::Endin) -> TokenStream2 {
-//    let tokens = Box::new(quote!());
-//    for variant in data.variants.iter() {
-//        let (_f, _t) = self::variant::decode(variant, ed);
-//        unimplemented!();
-//    }
-//    tokens
-    unimplemented!()
-}
-
-fn encode_union(_data: &DataUnion, _ed: &crate::Endin) -> TokenStream2 {
-    unimplemented!()
-}
-
-fn decode_union(_data: &DataUnion, _ed: &crate::Endin) -> TokenStream2 {
-    unimplemented!()
 }
