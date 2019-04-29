@@ -162,7 +162,7 @@ impl_float!(f32, f64);
 
 impl EncodeBe for bool {
     #[inline(always)]
-    fn encode_offset<T>(&self, target: &mut [u8], _ctx: &mut T, offset: &mut usize, bits: usize) {
+    fn encode_offset<T>(&self, target: &mut [u8], _ctx: &mut T, offset: &mut usize, _bits: usize) {
         // assert_eq!(bits, 1, "`bits` of bool type must be 1");
         unsafe {
             let v = self;
@@ -182,7 +182,7 @@ impl EncodeBe for bool {
 
 impl EncodeLe for bool {
     #[inline(always)]
-    fn encode_offset<T>(&self, target: &mut [u8], _ctx: &mut T, offset: &mut usize, bits: usize) {
+    fn encode_offset<T>(&self, target: &mut [u8], _ctx: &mut T, offset: &mut usize, _bits: usize) {
         // assert_eq!(bits, 1, "`bits` of bool type must be 1");
         unsafe {
             let v = self;

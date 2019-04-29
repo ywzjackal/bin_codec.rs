@@ -1,4 +1,4 @@
-#[derive(Debug)]
-pub enum Error {
-    UnexpectEof { offset: isize },
-}
+// #[derive(Debug)]
+// pub enum Error {
+//     UnexpectEof { offset: isize },
+// }

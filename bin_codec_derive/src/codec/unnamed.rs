@@ -23,6 +23,14 @@ pub(crate) fn size(field: &FieldsUnnamed, ed: &Endin) -> TokenStream {
     quote!(#(#tokens)+*)
 }
 
-pub(crate) fn decode(field: &FieldsUnnamed, ed: &Endin) -> Vec<TokenStream> {
-    field.unnamed.iter().map(|i| field::decode(i, ed)).collect()
+pub(crate) fn decode(field: &FieldsUnnamed, ed: &Endin) -> (Vec<TokenStream>, Vec<TokenStream>) {
+    let mut values = Vec::new();
+    let mut fields = Vec::new();
+    for (i, field) in field.unnamed.iter().enumerate() {
+        let t = field::decode(field, ed);
+        values.push(t);
+        let f: TokenStream = format!("_{}", i).parse().unwrap();
+        fields.push(f);
+    }
+    (values, fields)
 }

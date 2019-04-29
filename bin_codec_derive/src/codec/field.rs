@@ -9,7 +9,10 @@ pub(crate) fn encode_be(field: &Field, sequence: usize, ed: &Endin) -> TokenStre
         .ident
         .as_ref()
         .map(|id| quote!( self.#id ))
-        .unwrap_or(quote!( self.#sequence ));
+        .unwrap_or({
+            let seqname: TokenStream = format!("self.{}", sequence).parse().unwrap();
+            quote!( #seqname )
+        });
     let attr = FieldAttr::from_attrs(&field.attrs);
     let skip = attr
         .skip

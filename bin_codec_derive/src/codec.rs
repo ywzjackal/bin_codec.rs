@@ -15,7 +15,7 @@ pub(crate) fn encode(input: TokenStream, ed: Endin) -> TokenStream {
     let generics = input.generics;
     let where_clause = &generics.where_clause;
     let name = input.ident;
-    let decode: TokenStream2 = match &input.data {
+    let codec: TokenStream2 = match &input.data {
         Data::Struct(data_struct) => encode_struct(&data_struct, &ed),
         _ => unimplemented!()
     };
@@ -32,7 +32,7 @@ pub(crate) fn encode(input: TokenStream, ed: Endin) -> TokenStream {
             fn encode_offset<__CTX>(&self, target: &mut [u8], ctx: &mut __CTX, offset: &mut usize, bits: usize) {
                 use bin_codec::*;
                 let target_ptr = target.as_mut_ptr();
-                #decode
+                #codec
             }
 
             fn bits_with_user_define(&self, bits: Option<usize>) -> usize {
@@ -49,7 +49,7 @@ pub(crate) fn decode(input: TokenStream, ed: Endin) -> TokenStream {
     let generics = input.generics;
     let where_clause = &generics.where_clause;
     let name = &input.ident;
-    let decode_be: TokenStream2 = match &input.data {
+    let codec: TokenStream2 = match &input.data {
         Data::Struct(data_struct) => decode_struct(&data_struct, name, &ed),
         _ => unimplemented!(),
     };
@@ -63,7 +63,7 @@ pub(crate) fn decode(input: TokenStream, ed: Endin) -> TokenStream {
         impl #generics #trait_name for #name #generics #where_clause {
             type Context = #context_type;
             fn decode_offset(data: &[u8], data_start: &mut usize, sd: &mut ShouldDecode, ctx: &mut Self::Context, bits: usize) -> bin_codec::Result<Self> {
-                #decode_be
+                #codec
                 #has_next
                 Ok(rt)
             }
@@ -104,10 +104,11 @@ fn decode_struct(data: &DataStruct, name: &Ident, ed: &Endin) -> TokenStream2 {
             }
         }
         Fields::Unnamed(unnamed) => {
-            let values = self::unnamed::decode(unnamed, ed);
+            let (ref values, ref fields) = self::unnamed::decode(unnamed, ed);
             quote! {
+                #(let #fields = #values;)*
                 let rt = #name (
-                    #(#values,)*
+                    #(#fields,)*
                 );
             }
         }
