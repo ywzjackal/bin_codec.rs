@@ -31,22 +31,17 @@ macro_rules! fast_copy_code {
         let target_byte = (*$target_start / 8) as isize;
         let target_start_remainder = *$target_start % 8;
         let src_start_remainder = $src_start % 8;
-//        let total_bits = $src_stop - $src_start;
         let src_start_byte = ($src_start / 8) as isize;
         let src_stop_byte = ($src_stop - 1) / 8;
         let total_bytes = src_stop_byte + 1 - src_start_byte as usize;
-//        println!("total bytes:{}, {} -> {}", total_bytes, src_stop_byte, src_start_byte);
         if target_start_remainder < src_start_remainder {
-            // src << lsh
             let lsh = (src_start_remainder - target_start_remainder) % 8;
             $(
             if total_bytes >= std::mem::size_of::<$ty>() {
                 let mut number: $ty = (*($src.offset(src_start_byte as isize) as *const $ty)).to_be() << lsh;
-//                println!("num:{:b} = {:b} << {}", number, (*($src.offset(src_start_byte as isize) as *const $ty)).to_be(), lsh);
                 let hb = (&mut number as *mut $ty as *mut u8).offset(std::mem::size_of::<$ty>() as isize - 1);
                 *hb &= MASK_U8_REV[target_start_remainder];
                 *hb |= (*$target.offset(target_byte)) & MASK_U8_REV_BIT[target_start_remainder];
-//                println!("[{}] {:b} |= {:b}", target_byte, (*($target.offset(target_byte as isize) as *mut $ty)).to_be(), number);
                 *($target.offset(target_byte) as *mut $ty) = number.to_be();
                 let bits_copied = std::mem::size_of::<$ty>() * 8 - lsh - target_start_remainder;
                 *$target_start += bits_copied;
@@ -55,16 +50,13 @@ macro_rules! fast_copy_code {
             }
             )*
         } else {
-            // src >> rsh
             let rsh = (target_start_remainder - src_start_remainder) % 8;
             $(
             if total_bytes >= std::mem::size_of::<$ty>() {
                 let mut number: $ty = (*($src.offset(src_start_byte as isize) as *const $ty)).to_be() >> rsh;
-//                println!("num:{:b} = {:b} >> {}", number, (*($src.offset(src_start_byte as isize) as *const $ty)).to_be(), rsh);
                 let hb = (&mut number as *mut $ty as *mut u8).offset(std::mem::size_of::<$ty>() as isize - 1);
                 *hb &= MASK_U8_REV[target_start_remainder];
                 *hb |= (*$target.offset(target_byte)) & MASK_U8_REV_BIT[target_start_remainder];
-//                println!("[{}] {:b} |= {:b}", target_byte, (*($target.offset(target_byte as isize) as *mut $ty)).to_be(), number);
                 *($target.offset(target_byte as isize) as *mut $ty) = number.to_be();
                 let bits_copied = std::mem::size_of::<$ty>() * 8 - target_start_remainder;
                 *$target_start += bits_copied;
@@ -139,8 +131,6 @@ pub unsafe fn bit_copy(
     mut src_start: usize,
     bits: usize,
 ) {
-    //    assert!(src_stop / 8 < src.len());
-    //    assert!((target_start + src_stop - src_start) / 8 < target.len());
     let src_stop = src_start + bits;
     while src_start < src_stop {
         fast_copy_code!(

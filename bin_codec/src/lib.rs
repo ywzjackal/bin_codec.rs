@@ -1,3 +1,4 @@
+#![allow(clippy::cast_ptr_alignment)]
 extern crate proc_macro;
 mod error;
 mod utils;

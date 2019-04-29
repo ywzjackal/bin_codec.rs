@@ -1,7 +1,15 @@
 [package]
 name = "bin_codec"
 version = "0.1.0"
-authors = ["ywzjackal@163.com <ywzjackal@163.com>"]
+authors = ["Jackal <ywzjackal@163.com>"]
 edition = "2018"
+license = "MIT/Apache-2.0"
+readme = "../README.md"
+keywords = ["bitfield", "binary", "encode", "decode"]
+categories = ["web-programming"]
+description = "binary encoder decoder with bit field"
+repository = "https://github.com/ywzjackal/bin_codec.rs"
+homepage = "https://github.com/ywzjackal/bin_codec.rs"
+documentation = "https://github.com/ywzjackal/bin_codec.rs"
 
 [dependencies]

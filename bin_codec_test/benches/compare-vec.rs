@@ -4,7 +4,7 @@ extern crate criterion;
 extern crate serde_derive;
 extern crate bincode;
 
-use std::io::Cursor;
+
 use bin_codec::*;
 use bin_codec_derive::{BinEncodeBe};
 use criterion::Criterion;
@@ -135,7 +135,7 @@ fn bench_ts_encode(c: &mut Criterion) {
         ]
     };
     c.bench_function("compare-vec-bincode", move |b| b.iter(|| {
-        let target: Vec<u8> = serialize(&world).unwrap();
+        let _target: Vec<u8> = serialize(&world).unwrap();
         // assert_eq!(target[8], 0x04);
     }));
 
